@@ -5,7 +5,7 @@ FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
-    && \
+        && \
     rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for directories
@@ -24,7 +24,13 @@ RUN mkdir -p $COMFYUI_HOME/custom_nodes && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git $COMFYUI_HOME/custom_nodes/ComfyUI-Manager
 
 # Install additional dependencies for ComfyUI-Manager (if any)
-RUN pip install -r $COMFYUI_HOME/custom_nodes/ComfyUI-Manager/requirements.txt || echo "No additional requirements"
+RUN pip install -r $COMFYUI_HOME/custom_nodes/ComfyUI-Manager/requirements.txt || echo "No additional requirements for ComfyUI-Manager"
+
+# Install Pinokio as a custom node
+RUN git clone https://github.com/pinokioai/pinokio.git $COMFYUI_HOME/custom_nodes/pinokio
+
+# Install additional dependencies for Pinokio (if any)
+RUN pip install -r $COMFYUI_HOME/custom_nodes/pinokio/requirements.txt || echo "No additional requirements for Pinokio"
 
 # Set up persistent data directories by linking to /workspace
 RUN rm -rf $COMFYUI_HOME/models && \
