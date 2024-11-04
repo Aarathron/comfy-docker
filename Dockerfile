@@ -1,35 +1,54 @@
-# Start from the PyTorch image with CUDA 11.7 support
+# Use the PyTorch base image with CUDA support
 FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
 
-# Install necessary dependencies
+# Install necessary system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         git \
-    && \
+        curl \
+        && \
     rm -rf /var/lib/apt/lists/*
 
-# Clone the ComfyUI repository into /opt/ComfyUI
-RUN git clone https://github.com/comfyanonymous/ComfyUI.git /opt/ComfyUI
+# Set environment variables for directories
+ENV COMFYUI_HOME=/opt/ComfyUI
+ENV MANAGER_HOME=/opt/ComfyUI-Manager
 
-# Set the working directory
-WORKDIR /opt/ComfyUI
+# Clone the ComfyUI repository
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git $COMFYUI_HOME
 
-# Install Python packages required by ComfyUI
+# Set working directory to ComfyUI and install Python dependencies
+WORKDIR $COMFYUI_HOME
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# Map the 'models' directory to '/workspace/models' for data persistence
-RUN rm -rf /opt/ComfyUI/models && \
+# Clone the ComfyUI-Manager repository
+RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git $MANAGER_HOME
+
+# Set working directory to ComfyUI-Manager and install Python dependencies
+WORKDIR $MANAGER_HOME
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Set the working directory back to ComfyUI
+WORKDIR $COMFYUI_HOME
+
+# Set up persistent data directories by linking to /workspace
+RUN rm -rf $COMFYUI_HOME/models && \
     mkdir -p /workspace/models && \
-    ln -s /workspace/models /opt/ComfyUI/models
+    ln -s /workspace/models $COMFYUI_HOME/models
 
-# Map the 'output' directory to '/workspace/output' for data persistence
-RUN rm -rf /opt/ComfyUI/output && \
+RUN rm -rf $COMFYUI_HOME/output && \
     mkdir -p /workspace/output && \
-    ln -s /workspace/output /opt/ComfyUI/output
+    ln -s /workspace/output $COMfyUI_HOME/output
 
-# Expose port 8188 to access the ComfyUI interface
-EXPOSE 8188
+# Expose necessary ports
+EXPOSE 8188 8080
 
-# Run ComfyUI with the '--listen' argument to accept external connections
-CMD ["python", "main.py", "--listen"]
+# Copy the startup script into the container
+COPY startup.sh /startup.sh
+
+# Make the startup script executable
+RUN chmod +x /startup.sh
+
+# Define the entrypoint to run the startup script
+ENTRYPOINT ["/startup.sh"]
